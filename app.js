@@ -1,12 +1,13 @@
 /**
  * QUIZ MILITARNY: BWP / BMD / BTR
  * Cross-platform Progressive Web App (Windows, Android, GitHub Pages)
+ * Z dynamicznym losowaniem RÓŻNYCH zdjęć z internetu w czasie rzeczywistym!
  */
 
 (function () {
   'use strict';
 
-  // --- 1. Sound Effects (Web Audio API - No external files needed) ---
+  // --- 1. Sound Effects (Web Audio API) ---
   class SoundManager {
     constructor() {
       this.enabled = true;
@@ -70,7 +71,7 @@
     }
   }
 
-  // --- 2. Minimal Standalone SVG QR Code Generator ---
+  // --- 2. Minimal Standalone QR Code Generator ---
   function renderSvgQr(text, container) {
     const encoded = encodeURIComponent(text);
     const qrImg = document.createElement('img');
@@ -86,10 +87,122 @@
     container.appendChild(qrImg);
   }
 
-  // --- 3. Main Quiz Controller ---
+  // --- 3. Dynamic Online Image Pool Manager ---
+  // Zarządza pobieraniem i losowaniem RÓŻNYCH zdjęć dla każdego pojazdu z sieci
+  class ImagePoolManager {
+    constructor() {
+      // Pamięć podręczna puli zdjęć pobranych z internetu dla każdego pojazdu
+      this.onlinePoolCache = {};
+      this.lastUsedIndex = {};
+    }
+
+    /**
+     * Wyszukuje w sieci (Wikimedia/Wikipedia API) do 15 różnych zdjęć danego pojazdu
+     */
+    async fetchPoolFromInternet(searchQuery) {
+      if (this.onlinePoolCache[searchQuery] && this.onlinePoolCache[searchQuery].length > 0) {
+        return this.onlinePoolCache[searchQuery];
+      }
+
+      try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 2500);
+
+        // Krok 1: Wyszukaj pliki graficzne pod hasłem pojazdu (CORS origin: *)
+        const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&srnamespace=6&srlimit=15&format=json&origin=*`;
+        const res = await fetch(searchUrl, { signal: ctrl.signal });
+        clearTimeout(tid);
+
+        if (!res.ok) return [];
+        const data = await res.json();
+        const searchResults = (data.query && data.query.search) || [];
+        
+        const validTitles = searchResults
+          .map(r => r.title)
+          .filter(t => /\.(jpg|jpeg|png)$/i.test(t) && !/(flag|coat|map|icon|symbol|camo|operator|insignia)/i.test(t));
+
+        if (validTitles.length === 0) return [];
+
+        // Krok 2: Pobierz bezpośrednie adresy URL dla znalezionych zdjęć
+        const titlesParam = validTitles.slice(0, 10).join('|');
+        const urlsApi = `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(titlesParam)}&prop=imageinfo&iiprop=url&format=json&origin=*`;
+        
+        const resUrls = await fetch(urlsApi);
+        if (!resUrls.ok) return [];
+        const urlsData = await resUrls.json();
+        const pages = (urlsData.query && urlsData.query.pages) || {};
+
+        const foundUrls = [];
+        for (const pid in pages) {
+          const ii = pages[pid].imageinfo;
+          if (ii && ii[0] && ii[0].url) {
+            foundUrls.push(ii[0].url);
+          }
+        }
+
+        if (foundUrls.length > 0) {
+          this.onlinePoolCache[searchQuery] = foundUrls;
+          return foundUrls;
+        }
+      } catch (err) {
+        // błąd sieci lub offline
+      }
+
+      return [];
+    }
+
+    /**
+     * Losuje świeże, inne zdjęcie dla pojazdu (z internetu lub z zapasowej bazy)
+     */
+    async getRandomImageForVehicle(vehicleData) {
+      const query = vehicleData.searchQuery || vehicleData.displayName;
+      
+      // 1. Pobierz/pobieraj z internetu pulę zdjęć
+      const onlinePool = await this.fetchPoolFromInternet(query);
+
+      let poolToUse = [];
+      let isLiveWeb = false;
+
+      if (onlinePool.length > 0) {
+        poolToUse = onlinePool;
+        isLiveWeb = true;
+      } else {
+        // Fallback: połączenie onlineImages oraz lokalnych images
+        poolToUse = [
+          ...(vehicleData.onlineImages || []),
+          ...(vehicleData.images || [])
+        ];
+      }
+
+      if (poolToUse.length === 0) {
+        return {
+          url: 'images/btr_80.jpg',
+          source: 'KATALOG POJAZDÓW'
+        };
+      }
+
+      // Losujemy zdjęcie, unikając natychmiastowego powtórzenia tego samego
+      const lastIdx = this.lastUsedIndex[vehicleData.id] || 0;
+      let randIdx = Math.floor(Math.random() * poolToUse.length);
+      if (poolToUse.length > 1 && randIdx === lastIdx) {
+        randIdx = (randIdx + 1) % poolToUse.length;
+      }
+      this.lastUsedIndex[vehicleData.id] = randIdx;
+
+      return {
+        url: poolToUse[randIdx],
+        source: isLiveWeb ? `LOSOWANE Z SIECI (${randIdx + 1}/${poolToUse.length})` : 'KATALOG POJAZDÓW',
+        fallback: (vehicleData.onlineImages && vehicleData.onlineImages[0]) || poolToUse[0]
+      };
+    }
+  }
+
+  // --- 4. Main Quiz Controller ---
   class MilitaryQuizApp {
     constructor() {
       this.sound = new SoundManager();
+      this.imageManager = new ImagePoolManager();
+
       this.questionCount = 0;
       this.correctCount = 0;
       this.totalAnswered = 0;
@@ -137,24 +250,20 @@
     }
 
     initEvents() {
-      // Inline next button
       this.elBtnNext.addEventListener('click', () => {
         this.clearAdvanceTimer();
         this.nextQuestion();
       });
 
-      // Sound toggle
       this.elSoundBtn.addEventListener('click', () => {
         this.sound.enabled = !this.sound.enabled;
         this.elSoundIcon.textContent = this.sound.enabled ? '🔊' : '🔇';
       });
 
-      // Device info / Android modal
       this.elBtnDeviceInfo.addEventListener('click', () => this.showPairingModal());
       this.elBtnCloseModal.addEventListener('click', () => this.closePairingModal());
       this.elBtnModalOk.addEventListener('click', () => this.closePairingModal());
 
-      // Restart stats
       document.getElementById('btn-restart').addEventListener('click', () => {
         if (confirm('Czy na pewno chcesz zresetować statystyki i rekord?')) {
           this.correctCount = 0;
@@ -166,7 +275,6 @@
         }
       });
 
-      // Keyboard navigation
       window.addEventListener('keydown', (e) => {
         if (this.elModal && !this.elModal.classList.contains('hidden')) return;
 
@@ -195,7 +303,6 @@
         }
       });
 
-      // Register Service Worker for PWA
       if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
       }
@@ -225,73 +332,15 @@
         [choices[i], choices[j]] = [choices[j], choices[i]];
       }
 
-      const vehicleData = VEHICLES_DATABASE[correctKey];
-      
-      // Select local image and online fallback
-      const localImages = vehicleData.images || [];
-      const onlineImages = vehicleData.onlineImages || [];
-      
-      const selectedLocal = localImages.length > 0
-        ? localImages[Math.floor(Math.random() * localImages.length)]
-        : null;
-
-      const selectedOnline = onlineImages.length > 0
-        ? onlineImages[Math.floor(Math.random() * onlineImages.length)]
-        : null;
-
       return {
         correctKey,
-        vehicleData,
-        choices,
-        selectedLocal,
-        selectedOnline
+        vehicleData: VEHICLES_DATABASE[correctKey],
+        choices
       };
     }
 
     /**
-     * Live image fetcher working both with local server and directly on GitHub Pages!
-     */
-    async fetchLiveImage(correctKey, wikiTitle) {
-      // 1. Try local Python server API first (if running with server.py)
-      try {
-        const ctrl = new AbortController();
-        const tid = setTimeout(() => ctrl.abort(), 800);
-        const res = await fetch(`./api/search_image?query=${encodeURIComponent(correctKey)}`, { signal: ctrl.signal });
-        clearTimeout(tid);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.url) {
-            return { url: data.url, source: data.source || 'LIVE GOOGLE / WEB' };
-          }
-        }
-      } catch (e) {
-        // Not running on local server (e.g. GitHub Pages)
-      }
-
-      // 2. Direct client-side fetch from Wikipedia REST API (CORS enabled for all domains!)
-      try {
-        const ctrl = new AbortController();
-        const tid = setTimeout(() => ctrl.abort(), 1800);
-        const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiTitle)}`, {
-          signal: ctrl.signal
-        });
-        clearTimeout(tid);
-        if (res.ok) {
-          const data = await res.json();
-          const imgUrl = data.thumbnail?.source || data.originalimage?.source;
-          if (imgUrl) {
-            return { url: imgUrl.split('?')[0], source: 'LIVE GOOGLE / WEB' };
-          }
-        }
-      } catch (e) {
-        // Network timeout / offline
-      }
-
-      return null;
-    }
-
-    /**
-     * Next question in the infinite loop
+     * Kolejne pytanie: losuje pojazd i pobiera na bieżąco nowe zdjęcie z internetu!
      */
     async nextQuestion() {
       this.clearAdvanceTimer();
@@ -309,23 +358,12 @@
       this.elImage.classList.add('hidden');
 
       const vData = this.currentQuestion.vehicleData;
-      let targetUrl = null;
-      let sourceText = 'KATALOG POJAZDÓW';
 
-      // 1. Attempt live fetch
-      const liveResult = await this.fetchLiveImage(this.currentQuestion.correctKey, vData.wikiTitle || vData.displayName);
-      if (liveResult && liveResult.url) {
-        targetUrl = liveResult.url;
-        sourceText = liveResult.source;
-      } else {
-        // 2. Try online CDN image first (best for GitHub Pages)
-        targetUrl = this.currentQuestion.selectedOnline || this.currentQuestion.selectedLocal;
-        sourceText = 'KATALOG POJAZDÓW';
-      }
+      // Pobieramy i losujemy zdjęcie na bieżąco z internetu!
+      const imgResult = await this.imageManager.getRandomImageForVehicle(vData);
 
-      this.elTagBadge.textContent = sourceText;
+      this.elTagBadge.textContent = imgResult.source;
 
-      // Try loading the selected targetUrl
       const tryLoad = (url, fallbackUrl) => {
         const img = new Image();
         img.onload = () => {
@@ -335,11 +373,9 @@
         };
         img.onerror = () => {
           if (fallbackUrl && fallbackUrl !== url) {
-            // Try fallback (e.g. online CDN if local file was not uploaded to GitHub)
             tryLoad(fallbackUrl, null);
             this.elTagBadge.textContent = 'ONLINE CDN';
           } else {
-            // Last resort: another online image
             const emergency = (vData.onlineImages && vData.onlineImages[0]) || '';
             if (emergency && emergency !== url) {
               tryLoad(emergency, null);
@@ -349,7 +385,7 @@
         img.src = url;
       };
 
-      tryLoad(targetUrl, this.currentQuestion.selectedOnline);
+      tryLoad(imgResult.url, imgResult.fallback);
 
       this.renderAnswerButtons();
     }

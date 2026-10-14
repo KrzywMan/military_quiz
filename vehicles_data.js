@@ -1,5 +1,5 @@
 // Baza pojazdów bojowych dla Quizu Militarnego
-// Zawiera zarówno lokalne ścieżki (dla trybu offline), jak i bezpośrednie linki HTTPS (dla hostingu na GitHub Pages)
+// Zawiera konfigurację zapytań do dynamicznego wyszukiwania w internecie oraz zapasowe linki CDN
 const VEHICLES_DATABASE = {
   "bwp 1": {
     id: "bwp 1",
@@ -7,7 +7,7 @@ const VEHICLES_DATABASE = {
     wikiTitle: "BMP-1",
     type: "Bojowy Wóz Piechoty (gąsienicowy)",
     year: "1966",
-    searchQuery: "BWP-1 wojsko pojazd",
+    searchQuery: "BMP-1",
     images: [
       "images/bwp_1.jpg",
       "images/bwp_1_1.jpg"
@@ -23,7 +23,7 @@ const VEHICLES_DATABASE = {
     wikiTitle: "BMP-2",
     type: "Bojowy Wóz Piechoty (armata 30mm 2A42)",
     year: "1980",
-    searchQuery: "BMP-2 pojazd wojskowy",
+    searchQuery: "BMP-2",
     images: [
       "images/bwp_2.jpg"
     ],
@@ -38,7 +38,7 @@ const VEHICLES_DATABASE = {
     wikiTitle: "BMP-3",
     type: "Bojowy Wóz Piechoty (armata 100mm + 30mm)",
     year: "1987",
-    searchQuery: "BMP-3 pojazd pancerny",
+    searchQuery: "BMP-3",
     images: [
       "images/bwp_3.jpg"
     ],
@@ -53,7 +53,7 @@ const VEHICLES_DATABASE = {
     wikiTitle: "BWP_Borsuk",
     type: "Nowoczesny Bojowy Wóz Piechoty",
     year: "2022",
-    searchQuery: "BWP Borsuk pojazd",
+    searchQuery: "BWP Borsuk",
     images: [
       "images/bwp_4.jpg"
     ],
@@ -68,7 +68,7 @@ const VEHICLES_DATABASE = {
     wikiTitle: "BMD-1",
     type: "Bojowy Wóz Desantu (lekki, desantowany z samolotów)",
     year: "1969",
-    searchQuery: "BMD-1 pojazd desantowy",
+    searchQuery: "BMD-1",
     images: [
       "images/bmd_1.jpg"
     ],
@@ -83,7 +83,7 @@ const VEHICLES_DATABASE = {
     wikiTitle: "BMD-2",
     type: "Bojowy Wóz Desantu (armata 30mm 2A42)",
     year: "1985",
-    searchQuery: "BMD-2 airborne combat vehicle",
+    searchQuery: "BMD-2",
     images: [
       "images/bmd_2.jpg"
     ],
@@ -98,7 +98,7 @@ const VEHICLES_DATABASE = {
     wikiTitle: "BMD-3",
     type: "Bojowy Wóz Desantu nowej generacji",
     year: "1990",
-    searchQuery: "BMD-3 pojazd wojskowy",
+    searchQuery: "BMD-3",
     images: [
       "images/bmd_3.jpg",
       "images/bmd_3_1.jpg"
@@ -114,7 +114,7 @@ const VEHICLES_DATABASE = {
     wikiTitle: "BMD-4",
     type: "Bojowy Wóz Desantu (moduł Bachcza-U)",
     year: "2004",
-    searchQuery: "BMD-4 pojazd pancerny",
+    searchQuery: "BMD-4",
     images: [
       "images/bmd_4.jpg",
       "images/bmd_4_2.jpg"
@@ -130,7 +130,7 @@ const VEHICLES_DATABASE = {
     wikiTitle: "BTR-60",
     type: "Kołowy Transporter Opancerzony 8x8 (podwójny silnik)",
     year: "1959",
-    searchQuery: "BTR-60 transporter",
+    searchQuery: "BTR-60",
     images: [
       "images/btr_60.jpg",
       "images/btr_60_2.jpg"
@@ -146,7 +146,7 @@ const VEHICLES_DATABASE = {
     wikiTitle: "BTR-70",
     type: "Kołowy Transporter Opancerzony 8x8 (drzwi boczne dolne)",
     year: "1972",
-    searchQuery: "BTR-70 transporter",
+    searchQuery: "BTR-70",
     images: [
       "images/btr_70.jpg"
     ],
@@ -161,7 +161,7 @@ const VEHICLES_DATABASE = {
     wikiTitle: "BTR-80",
     type: "Kołowy Transporter Opancerzony 8x8 (jeden silnik wysokoprężny, dzielone drzwi)",
     year: "1986",
-    searchQuery: "BTR-80 transporter opancerzony",
+    searchQuery: "BTR-80",
     images: [
       "images/btr_80.jpg",
       "images/btr_80_2.jpg"
@@ -177,7 +177,7 @@ const VEHICLES_DATABASE = {
     wikiTitle: "BTR-82A",
     type: "Kołowy Transporter Opancerzony (wieża BPPU z armatą 30mm 2A72)",
     year: "2013",
-    searchQuery: "BTR-82A transporter",
+    searchQuery: "BTR-82",
     images: [
       "images/btr_82a.jpg"
     ],
@@ -192,7 +192,7 @@ const VEHICLES_DATABASE = {
     wikiTitle: "BTR-90",
     type: "Ciężki Kołowy Transporter Opancerzony 8x8 (Rostok)",
     year: "1994",
-    searchQuery: "BTR-90 Rostok",
+    searchQuery: "BTR-90",
     images: [
       "images/btr_90.jpg",
       "images/btr_90_1.jpg"
