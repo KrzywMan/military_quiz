@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Quiz Militarny: BWP • BMD • BTR</title>
+  <meta name="theme-color" content="#0d1117">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="Nieskończony quiz rozpoznawania wozów bojowych i transporterów piechoty BWP, BMD, BTR dla Windows i Android">
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/favicon.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Bar -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-badge">
+          <svg viewBox="0 0 24 24" class="tank-icon">
+            <path d="M19 13h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h1l1-4h3V7l4-3 1 1-2.5 2H16l1 4h2l1 2zm-1 2H6l-.75 3h13.5l-.75-3zM8 17a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm4 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm4 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" fill="currentColor"/>
+          </svg>
+          <div class="title-wrap">
+            <span class="app-title">QUIZ MILITARNY</span>
+            <span class="app-subtitle">BWP • BMD • BTR</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="btn-sound" class="icon-btn" title="Dźwięk włączony/wyłączony">
+          <span id="sound-icon">🔊</span>
+        </button>
+        <button id="btn-device-info" class="action-pill-btn" title="Zagraj na Androidzie">
+          <span class="pill-icon">📱</span>
+          <span class="pill-text">Graj na Androidzie</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Stats & Scoreboard -->
+    <section class="stats-bar">
+      <div class="stat-card streak-card">
+        <span class="stat-icon">🔥</span>
+        <div class="stat-data">
+          <span class="stat-label">Seria</span>
+          <span id="stat-streak" class="stat-val">0</span>
+        </div>
+      </div>
+
+      <div class="stat-card score-card">
+        <span class="stat-icon">🎯</span>
+        <div class="stat-data">
+          <span class="stat-label">Trafienia</span>
+          <span id="stat-score" class="stat-val">0 / 0</span>
+        </div>
+      </div>
+
+      <div class="stat-card accuracy-card">
+        <span class="stat-icon">📈</span>
+        <div class="stat-data">
+          <span class="stat-label">Celność</span>
+          <span id="stat-accuracy" class="stat-val">100%</span>
+        </div>
+      </div>
+
+      <div class="stat-card record-card">
+        <span class="stat-icon">🏆</span>
+        <div class="stat-data">
+          <span class="stat-label">Rekord</span>
+          <span id="stat-best" class="stat-val">0</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Question Tracker & Mode -->
+    <div class="sub-bar">
+      <div class="mode-badge">
+        <span class="pulse-dot"></span>
+        <span id="source-badge-text">Pobieranie na bieżąco: Google / Sieć</span>
+      </div>
+      <div class="question-counter">
+        Pytanie <strong id="question-num">#1</strong> (Tryb nieskończony)
+      </div>
+    </div>
+
+    <!-- Main Quiz Area -->
+    <main class="quiz-arena">
+      <!-- Target Image Container -->
+      <div class="image-stage">
+        <div class="image-frame" id="image-frame">
+          <div class="hud-corner top-left"></div>
+          <div class="hud-corner top-right"></div>
+          <div class="hud-corner bottom-left"></div>
+          <div class="hud-corner bottom-right"></div>
+          
+          <div class="reticle-center"></div>
+
+          <!-- Loading Spinner -->
+          <div id="image-loader" class="loader-container">
+            <div class="military-spinner"></div>
+            <span class="loader-text">Pobieranie zdjęcia pojazdu...</span>
+          </div>
+
+          <!-- The Real-time Vehicle Image -->
+          <img id="vehicle-image" src="" alt="Zdjęcie pojazdu bojowego" class="vehicle-img hidden" loading="eager">
+
+          <div class="image-overlay-tags">
+            <span id="image-source-tag" class="tag-badge">LIVE GOOGLE / WEB</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Feedback Banner -->
+      <div id="feedback-banner" class="feedback-banner hidden">
+        <div class="feedback-content">
+          <div id="feedback-icon" class="feedback-icon">✔</div>
+          <div class="feedback-text-wrap">
+            <div id="feedback-title" class="feedback-title">Poprawna odpowiedź!</div>
+            <div id="feedback-desc" class="feedback-desc">To jest BTR-80 (Kołowy Transporter Opancerzony)</div>
+          </div>
+        </div>
+        <button id="btn-next-inline" class="next-btn-inline">
+          Następne ➔
+        </button>
+      </div>
+
+      <!-- Answers Grid (4 Choices) -->
+      <div class="answers-section">
+        <p class="instruction-label">Jaki to pojazd bojowy? Wybierz odpowiedź:</p>
+        <div class="answers-grid" id="answers-grid">
+          <!-- Populated dynamically: 4 buttons -->
+        </div>
+      </div>
+
+      <!-- Progress bar for auto-advancing -->
+      <div class="auto-advance-wrap" id="auto-advance-wrap">
+        <div class="progress-track">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Controls & Hints -->
+    <footer class="app-footer">
+      <div class="pool-info">
+        Pula: <strong id="pool-count">149 sprzętów</strong> (Wozy bojowe, OPL, radary, artyleria, czołgi, myśliwce, śmigłowce)
+      </div>
+      <div class="controls-row">
+        <label class="toggle-container" title="Automatyczne przejście po wskazaniu odpowiedzi">
+          <input type="checkbox" id="toggle-auto-next" checked>
+          <span class="toggle-switch"></span>
+          <span class="toggle-label">Auto-przejście (1.8s)</span>
+        </label>
+        <button id="btn-restart" class="text-link-btn">Zresetuj statystyki</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- QR Code & Android Pairing Modal -->
+  <div id="qr-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📱 Graj na telefonie z Androidem</h3>
+        <button id="btn-close-modal" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-info">Aplikacja działa płynnie w przeglądarce telefonu lub jako zainstalowana aplikacja (PWA):</p>
+        
+        <div class="qr-code-box" id="qr-box">
+          <div id="qr-canvas-wrap"></div>
+          <div id="qr-network-url" class="network-url-pill">Ładowanie adresu...</div>
+        </div>
+
+        <ol class="pairing-steps">
+          <li>Upewnij się, że telefon i komputer są w <strong>tej samej sieci Wi-Fi</strong>.</li>
+          <li>Zeskanuj powyższy kod QR aparatem w telefonie lub wpisz adres w Chrome.</li>
+          <li>W Chrome na Androidzie kliknij <strong>„Dodaj do ekranu głównego”</strong> lub <strong>„Zainstaluj aplikację”</strong>, aby grać na pełnym ekranie jak w natywnej aplikacji!</li>
+        </ol>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-modal-ok" class="btn-primary">Rozumiem, gram dalej</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="vehicles_data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
